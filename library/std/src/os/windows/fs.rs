@@ -50,6 +50,13 @@ pub trait FileExt {
     #[stable(feature = "file_offset", since = "1.15.0")]
     fn seek_read(&self, buf: &mut [u8], offset: u64) -> io::Result<usize>;
 
+    #[unstable(feature = "read_buf", issue = "78485")]
+    fn seek_read_buf(&self, mut cursor: io::BorrowedCursor<'_>, offset: u64) -> io::Result<()> {
+        let n = self.seek_read(cursor.ensure_init().init_mut(), offset)?;
+        cursor.advance(n);
+        Ok(())
+    }
+
     /// Seeks to a given position and writes a number of bytes.
     ///
     /// Returns the number of bytes written.
@@ -88,6 +95,10 @@ pub trait FileExt {
 impl FileExt for fs::File {
     fn seek_read(&self, buf: &mut [u8], offset: u64) -> io::Result<usize> {
         self.as_inner().read_at(buf, offset)
+    }
+
+    fn seek_read_buf(&self, cursor: io::BorrowedCursor<'_>, offset: u64) -> io::Result<()> {
+        self.as_inner().read_buf_at(cursor, offset)
     }
 
     fn seek_write(&self, buf: &[u8], offset: u64) -> io::Result<usize> {
